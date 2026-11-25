@@ -1,0 +1,1306 @@
+/* ============================================================================
+   CUSTOM THEME
+   Login  -> Abyss-inspired: monochrome, glass, TRANSPARENT page
+   App    -> Nebula-inspired: dark violet/cyan, gradient accents, glow
+   Layout -> categories centered at the top, profile entry at the TOP-LEFT
+
+   State hooks
+   -----------
+   Custom app:
+     <body class="login-page">   on the login screen
+     <body class="authed">       after login
+   Jellyfin:
+     detected automatically via #loginPage / #loginPage.hide
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ---------------------------------------------------------------------------
+   1. TOKENS
+   ------------------------------------------------------------------------- */
+
+:root {
+  /* ---- Abyss (login) ---- */
+  --abyss-accent: 245 245 247;          /* monochrome accent, RGB triplet */
+  --abyss-glass-tint: 42 42 42;
+  --abyss-radius: 12px;
+  --abyss-ease: cubic-bezier(.16, 1, .3, 1);
+  --abyss-blur: 24px;
+
+  /* Login surface */
+  --login-bg: transparent;              /* keep transparent to show your wallpaper */
+  --login-image: none;                  /* optional: url("...") image behind the login card */
+  --login-image-opacity: 1;             /* 0 = invisible, 1 = full */
+  --login-image-brightness: 100%;
+  --login-image-blur: 0px;
+  --login-scrim: 0;                     /* darkening veil; 0 = image fully visible */
+  --login-card-rgb: 18 18 20;           /* glass card tint */
+  --login-card-alpha: .32;
+
+  /* ---- Nebula (app) ---- */
+  --nb-bg: #0b0b0d;
+  --nb-surface: #141418;
+  --nb-surface-2: #1c1c22;
+  --nb-line: rgba(255, 255, 255, .07);
+  --nb-text: #ececf1;
+  --nb-muted: #8b8b96;
+
+  --nb-a1: #8b5cf6;
+  --nb-a1-rgb: 139, 92, 246;
+  --nb-a2: #22d3ee;
+  --nb-a2-rgb: 34, 211, 238;
+  --nb-grad: linear-gradient(135deg, var(--nb-a1), var(--nb-a2));
+
+  --nb-radius: 16px;
+  --nb-radius-sm: 12px;
+  --nb-ease: cubic-bezier(.2, .8, .2, 1);
+
+  /* ---- Shell ---- */
+  --header-h: 64px;
+  --header-x: clamp(14px, 2.2vw, 28px);
+}
+
+/* ---------------------------------------------------------------------------
+   2. BASE
+   ------------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html {
+  background: var(--nb-bg);
+  scrollbar-color: rgba(var(--nb-a1-rgb), .55) transparent;
+}
+
+/* Login state: let the page background/image show through */
+html:has(#loginPage:not(.hide)),
+html:has(.login-page) { background-color: var(--login-bg) !important; }
+
+body {
+  margin: 0;
+  background: transparent;
+  color: var(--nb-text);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior: none;
+}
+
+body button,
+body input,
+body select,
+body textarea,
+body .emby-button { font-family: inherit; }
+
+/* Ambient violet/cyan glow behind the app */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(var(--nb-a1-rgb), .12), transparent 60%),
+    radial-gradient(1000px 520px at 100% 0%, rgba(var(--nb-a2-rgb), .08), transparent 60%);
+}
+
+/* Hide the app glow while on login (login is monochrome) */
+html:has(#loginPage:not(.hide)) body::before,
+html:has(.login-page) body::before { opacity: 0; }
+
+::selection { background: rgba(var(--nb-a1-rgb), .45); color: #fff; }
+
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .12); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(var(--nb-a1-rgb), .55); }
+::-webkit-scrollbar-corner { background: transparent; }
+
+:focus-visible { outline: 2px solid rgba(var(--nb-a1-rgb), .65) !important; outline-offset: 2px; }
+
+/* ---------------------------------------------------------------------------
+   3. APP HEADER
+   Left: profile  |  Center: categories  |  Right: actions
+   ------------------------------------------------------------------------- */
+
+/* Custom app shell */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: grid;
+  /* equal side columns keep the category bar on the true center line */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: var(--header-h);
+  padding: 0 var(--header-x);
+  background: rgba(11, 11, 13, .72);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  border-bottom: 1px solid var(--nb-line);
+}
+
+.app-header .profile-menu { grid-column: 1; justify-self: start; }
+.app-header .category-bar { grid-column: 2; justify-self: center; min-width: 0; }
+.app-header .header-actions { grid-column: 3; justify-self: end; display: flex; align-items: center; gap: 6px; }
+
+/* Jellyfin headers (legacy skin + MUI 12) */
+.skinHeader,
+header.MuiAppBar-root {
+  color: var(--nb-text);
+  background: rgba(11, 11, 13, .72) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  border-bottom: 1px solid var(--nb-line) !important;
+  box-shadow: none !important;
+}
+
+header.MuiAppBar-root { /* Jellyfin positions this itself */ }
+.skinHeader { position: relative; border-radius: 0 !important; }
+
+header.MuiAppBar-root > .MuiToolbar-root {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: var(--header-h);
+  padding-inline: var(--header-x);
+}
+
+/* Jellyfin 12: tabs pinned dead-center in the top bar */
+header.MuiAppBar-root > .MuiToolbar-root:first-of-type > .MuiStack-root:first-of-type,
+header.MuiAppBar-root > .MuiToolbar-root:first-of-type > .headerTabs,
+header.MuiAppBar-root .MuiToolbar-root > .headerTabs {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0 !important;
+  max-width: min(60vw, 900px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 999px;
+}
+
+header.MuiAppBar-root > .MuiToolbar-root:first-of-type > .MuiStack-root:first-of-type::-webkit-scrollbar,
+header.MuiAppBar-root > .MuiToolbar-root:first-of-type > .headerTabs::-webkit-scrollbar { display: none; }
+
+/* Jellyfin 12: move the profile/actions cluster to the LEFT edge */
+header.MuiAppBar-root > .MuiToolbar-root:first-of-type > .MuiBox-root:last-child {
+  order: -1;
+  margin-right: auto;
+  margin-left: 0;
+}
+
+header.MuiAppBar-root .MuiToolbar-root > .MuiBox-root { gap: .5rem; }
+
+/* Legacy header: avatar to the top-left */
+.skinHeader .headerRight .headerUserButtonRound {
+  position: absolute;
+  left: var(--header-x);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+/* ---------------------------------------------------------------------------
+   4. PROFILE (top-left)
+   ------------------------------------------------------------------------- */
+
+.profile-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px 4px 4px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--nb-text);
+  font: inherit;
+  cursor: pointer;
+  transition: background .2s var(--nb-ease), transform .2s var(--nb-ease);
+}
+
+.profile-menu:hover { background: rgba(255, 255, 255, .06); }
+.profile-menu:active { transform: scale(.97); }
+
+.profile-menu .avatar,
+.profile-menu img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-menu .avatar,
+.headerUserButtonRound,
+header.MuiAppBar-root .MuiAvatar-root {
+  box-shadow:
+    0 0 0 2px var(--nb-bg),
+    0 0 0 3.5px rgba(var(--nb-a1-rgb), .8);
+}
+
+.profile-menu .profile-name {
+  font-size: .9rem;
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+
+@media (max-width: 620px) {
+  .profile-menu .profile-name { display: none; }
+  .profile-menu { padding: 4px; }
+}
+
+/* Profile / settings panel, anchored top-left under the header */
+.profile-panel {
+  position: fixed;
+  top: calc(var(--header-h) + 8px);
+  left: var(--header-x);
+  z-index: 70;
+  width: min(320px, calc(100vw - (2 * var(--header-x))));
+  padding: 8px;
+  background: rgba(20, 20, 24, .92);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  backdrop-filter: blur(22px) saturate(150%);
+  border: 1px solid var(--nb-line);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
+  transform-origin: top left;
+  animation: panelIn .18s var(--nb-ease);
+}
+
+.profile-panel[hidden] { display: none; }
+
+.profile-panel .profile-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid var(--nb-line);
+  margin-bottom: 6px;
+}
+
+.profile-panel .profile-panel-header .avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-panel .profile-panel-name { font-weight: 700; }
+.profile-panel .profile-panel-sub { color: var(--nb-muted); font-size: .8rem; }
+
+.profile-panel .profile-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--nb-text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .15s var(--nb-ease), color .15s var(--nb-ease);
+}
+
+.profile-panel .profile-item:hover { background: rgba(var(--nb-a1-rgb), .16); }
+.profile-panel .profile-item[aria-current="true"] { background: rgba(var(--nb-a1-rgb), .16); font-weight: 600; }
+.profile-panel .profile-item .icon { color: var(--nb-muted); }
+.profile-panel .profile-item:hover .icon { color: var(--nb-a2); }
+
+.profile-panel .profile-item.danger { color: #fca5a5; }
+.profile-panel .profile-item.danger:hover { background: rgba(239, 68, 68, .16); }
+
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(-6px) scale(.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---------------------------------------------------------------------------
+   5. CATEGORIES (centered, top)
+   ------------------------------------------------------------------------- */
+
+.category-bar,
+.category-nav {
+  display: flex;
+  align-items: center;
+  justify-content: safe center;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.category-bar::-webkit-scrollbar,
+.category-nav::-webkit-scrollbar { display: none; }
+
+.category-bar .category,
+.category-nav .category {
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+  appearance: none;
+  border: 0;
+  padding: .52em 1.1em;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--nb-muted);
+  font: inherit;
+  font-size: .95rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color .2s var(--nb-ease), background .2s var(--nb-ease), box-shadow .2s var(--nb-ease);
+}
+
+.category-bar .category:hover,
+.category-nav .category:hover {
+  color: var(--nb-text);
+  background: rgba(255, 255, 255, .06);
+}
+
+.category-bar .category.is-active,
+.category-bar .category[aria-current="page"],
+.category-bar .category[aria-selected="true"],
+.category-nav .category.is-active,
+.category-nav .category[aria-current="page"] {
+  color: #fff;
+  font-weight: 600;
+  background: linear-gradient(135deg, rgba(var(--nb-a1-rgb), .3), rgba(var(--nb-a2-rgb), .18));
+  box-shadow: inset 0 0 0 1px rgba(var(--nb-a1-rgb), .35);
+}
+
+/* Jellyfin tab bars (legacy + library section tabs) */
+.headerTabs,
+.headerTabs.sectionTabs {
+  display: flex;
+  align-items: center;
+  justify-content: safe center;
+  gap: 4px;
+  width: fit-content;
+  max-width: min(95vw, 1000px);
+  margin-inline: auto !important;
+  padding: 4px;
+  border-radius: 999px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.headerTabs::-webkit-scrollbar { display: none; }
+
+.headerTabs .emby-tab-button,
+.emby-tab-button {
+  flex: 0 0 auto;
+  margin: 0 1px;
+  padding: .5em 1.15em;
+  border: 0;
+  border-radius: 999px;
+  color: var(--nb-muted);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color .2s var(--nb-ease), background .2s var(--nb-ease);
+}
+
+.headerTabs .emby-tab-button:hover,
+.emby-tab-button:hover {
+  color: var(--nb-text);
+  background: rgba(255, 255, 255, .06);
+}
+
+.emby-tab-button-active,
+.headerTabs .emby-tab-button-active {
+  color: #fff !important;
+  border: 0 !important;
+  border-bottom: 0 !important;
+  background: linear-gradient(135deg, rgba(var(--nb-a1-rgb), .3), rgba(var(--nb-a2-rgb), .2)) !important;
+  box-shadow: inset 0 0 0 1px rgba(var(--nb-a1-rgb), .35);
+}
+
+/* MUI tabs (settings/library views) */
+.MuiTab-root.Mui-selected { color: #fff !important; }
+.MuiTabs-indicator { background: var(--nb-grad) !important; border-radius: 99px; }
+
+/* ---------------------------------------------------------------------------
+   6. TYPOGRAPHY & SECTION TITLES
+   ------------------------------------------------------------------------- */
+
+body h1,
+body h2,
+body h3,
+body .itemName,
+body .parentName { letter-spacing: -.02em; }
+
+.sectionTitle,
+.sectionTitle-cards,
+h2.sectionTitle {
+  color: var(--nb-text);
+  font-weight: 600 !important;
+  font-size: 1.15em !important;
+  letter-spacing: -.01em;
+}
+
+.sectionTitle.sectionTitle-cards,
+.homeSectionsContainer .sectionTitle,
+.verticalSection > .sectionTitleContainer .sectionTitle,
+.detailSectionHeader h2 { position: relative; }
+
+.sectionTitle.sectionTitle-cards::before,
+.homeSectionsContainer .sectionTitle::before,
+.verticalSection > .sectionTitleContainer .sectionTitle::before,
+.detailSectionHeader h2::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 1em;
+  margin-right: .55em;
+  vertical-align: -.12em;
+  border-radius: 4px;
+  background: var(--nb-grad);
+}
+
+.sectionTitleTextButton:hover .sectionTitle { color: #fff; }
+.sectionTitleTextButton:hover .material-icons { color: var(--nb-a2) !important; }
+.sectionTitle .material-icons { color: var(--nb-muted); }
+
+.itemName { font-weight: 700 !important; }
+.overview,
+.itemOverview { color: #c9c9d2 !important; line-height: 1.65 !important; max-width: 70ch; }
+.itemMiscInfo,
+.mediaInfoItem { color: var(--nb-muted); }
+
+/* ---------------------------------------------------------------------------
+   7. CARDS
+   ------------------------------------------------------------------------- */
+
+.cardBox,
+.cardScalable,
+.cardImageContainer,
+.cardContent,
+.cardPadder,
+.cardOverlayContainer {
+  border-radius: var(--nb-radius) !important;
+}
+
+.cardBox { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+.cardScalable {
+  overflow: hidden;
+  transition: transform .25s var(--nb-ease), box-shadow .25s var(--nb-ease);
+}
+
+.card:hover .cardScalable,
+.card:focus .cardScalable {
+  transform: translateY(-3px);
+  box-shadow:
+    0 12px 26px -10px rgba(0, 0, 0, .7),
+    0 0 0 1px rgba(var(--nb-a1-rgb), .55),
+    0 0 28px rgba(var(--nb-a1-rgb), .25) !important;
+}
+
+.card:focus { outline: none !important; }
+.card:focus .cardBox { outline: none !important; }
+.card.show-focus:focus .cardScalable { box-shadow: 0 0 0 2px var(--nb-a1), 0 10px 28px rgba(0, 0, 0, .55) !important; }
+
+/* Card text: left aligned, clear hierarchy */
+.cardBox > .cardText,
+.cardBox > .cardTextCentered,
+.cardFooter .cardText {
+  justify-content: flex-start !important;
+  text-align: left !important;
+  padding-left: .2em !important;
+  padding-right: .2em !important;
+  color: var(--nb-text);
+}
+
+.cardBox > .cardText-first,
+.cardFooter .cardText-first {
+  padding-top: .55em !important;
+  font-size: .92em !important;
+  font-weight: 600 !important;
+  letter-spacing: -.005em;
+}
+
+.cardBox > .cardText-secondary,
+.cardFooter .cardText-secondary {
+  font-size: .78em !important;
+  font-weight: 400 !important;
+  color: var(--nb-muted) !important;
+}
+
+.card:hover .cardBox > .cardText-first,
+.card:hover .cardBox > .cardText { color: #fff !important; opacity: 1 !important; }
+
+/* "My media" / library cards stay centered */
+.section0 .cardBox > .cardText,
+.section0 .cardFooter,
+.homeLibraryButton .cardFooter { justify-content: center !important; text-align: center !important; }
+
+/* Shine only on real hover-capable devices */
+@media (hover: hover) {
+  .cardImageContainer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, .14) 50%, transparent 65%);
+    transform: translateX(-120%);
+  }
+  .card:hover .cardImageContainer::after { animation: shine .8s var(--nb-ease) forwards; }
+}
+
+@keyframes shine { to { transform: translateX(120%); } }
+
+/* Indicators / progress */
+.countIndicator,
+.playedIndicator,
+.cardIndicators .countIndicator {
+  padding: 4px;
+  border-radius: 10px !important;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.countIndicator,
+.cardIndicators .countIndicator {
+  background: var(--nb-grad) !important;
+  color: #fff !important;
+}
+
+.playedIndicator { background: rgba(16, 185, 129, .95) !important; color: #fff !important; }
+
+.itemProgressBar { background: rgba(255, 255, 255, .15) !important; border-radius: 2px; }
+.itemProgressBarForeground,
+.playbackProgress > div,
+.mdl-slider-background-lower { background: var(--nb-grad) !important; }
+
+/* ---------------------------------------------------------------------------
+   8. BUTTONS
+   ------------------------------------------------------------------------- */
+
+.raised,
+.emby-button.raised,
+.button-submit,
+.detailButton,
+.MuiButton-root {
+  border-radius: 999px !important;
+  text-transform: none !important;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.raised:not(.button-submit),
+.emby-button.raised:not(.button-submit) {
+  background: var(--nb-surface-2) !important;
+  color: var(--nb-text) !important;
+  border: 1px solid var(--nb-line);
+}
+
+.button-submit,
+.emby-button.button-submit,
+.MuiButton-containedPrimary,
+.detailButton.btnPlay,
+.btnPlay.detailButton,
+.cardOverlayFab-primary {
+  background: var(--nb-grad) !important;
+  color: #fff !important;
+  border: 0 !important;
+  box-shadow: 0 8px 28px rgba(var(--nb-a1-rgb), .4) !important;
+  transition: filter .2s var(--nb-ease), transform .2s var(--nb-ease), box-shadow .2s var(--nb-ease);
+}
+
+.button-submit:hover,
+.MuiButton-containedPrimary:hover,
+.detailButton.btnPlay:hover,
+.cardOverlayFab-primary:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 34px rgba(var(--nb-a2-rgb), .45) !important;
+}
+
+.detailButton:not(.btnPlay) {
+  background: rgba(30, 30, 38, .78) !important;
+  border: 1px solid var(--nb-line);
+  color: var(--nb-text);
+}
+
+.detailButton:not(.btnPlay):hover {
+  border-color: rgba(var(--nb-a1-rgb), .6);
+  color: #fff;
+}
+
+.paper-icon-button-light,
+.headerButton,
+.MuiIconButton-root {
+  border-radius: 999px !important;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  transition: background .15s var(--nb-ease), transform .15s var(--nb-ease);
+}
+
+.paper-icon-button-light:hover:not(:disabled),
+.headerButton:hover,
+.MuiIconButton-root:hover { background: rgba(255, 255, 255, .08) !important; }
+.paper-icon-button-light:active,
+.MuiIconButton-root:active { transform: scale(.92); }
+
+/* ---------------------------------------------------------------------------
+   9. INPUTS
+   ------------------------------------------------------------------------- */
+
+.emby-input,
+.emby-textarea,
+.emby-select,
+.emby-select-withcolor,
+.MuiFilledInput-root,
+.MuiOutlinedInput-root {
+  background: var(--nb-surface-2) !important;
+  border: 1px solid var(--nb-line) !important;
+  border-radius: var(--nb-radius-sm) !important;
+  color: var(--nb-text) !important;
+  transition: border-color .2s var(--nb-ease), box-shadow .2s var(--nb-ease), background .2s var(--nb-ease);
+}
+
+.MuiFilledInput-root::before,
+.MuiFilledInput-root::after { display: none !important; }
+.MuiOutlinedInput-notchedOutline { border: 0 !important; }
+
+.emby-input:focus,
+.emby-textarea:focus,
+.emby-select:focus,
+.MuiFilledInput-root.Mui-focused,
+.MuiOutlinedInput-root.Mui-focused {
+  border-color: rgba(var(--nb-a1-rgb), .7) !important;
+  box-shadow: 0 0 0 3px rgba(var(--nb-a1-rgb), .18) !important;
+  background: #22222a !important;
+}
+
+.MuiInputLabel-root,
+.MuiFormHelperText-root { color: var(--nb-muted) !important; }
+.MuiInputLabel-root.Mui-focused { color: var(--nb-text) !important; }
+
+.MuiCheckbox-root.Mui-checked,
+.MuiRadio-root.Mui-checked,
+.MuiSwitch-switchBase.Mui-checked { color: var(--nb-a1) !important; }
+
+.MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track { background: var(--nb-a1) !important; opacity: .55 !important; }
+.MuiSwitch-track { border-radius: 99px !important; }
+.MuiSelect-icon { color: var(--nb-muted) !important; }
+
+/* ---------------------------------------------------------------------------
+   10. MENUS / DRAWERS / DIALOGS
+   ------------------------------------------------------------------------- */
+
+.MuiMenu-paper,
+.MuiPopover-paper,
+.MuiDialog-paper,
+.dialog,
+.formDialog,
+.actionSheet,
+.upNextContainer,
+.toast {
+  background: rgba(20, 20, 24, .92) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  backdrop-filter: blur(22px) saturate(150%);
+  border: 1px solid var(--nb-line) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .55) !important;
+  color: var(--nb-text);
+}
+
+.MuiDrawer-paper,
+.mainDrawer {
+  background: rgba(14, 14, 18, .93) !important;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 0 !important;
+  border-right: 1px solid var(--nb-line) !important;
+  border-radius: 0 18px 18px 0 !important;
+}
+
+.MuiMenu-paper { padding: 6px; }
+.MuiMenuItem-root,
+.actionSheetMenuItem,
+.navMenuOption {
+  border-radius: 10px !important;
+  margin: 1px 2px !important;
+  transition: background .15s var(--nb-ease), color .15s var(--nb-ease);
+}
+
+.MuiMenuItem-root:hover,
+.actionSheetMenuItem:hover,
+.navMenuOption:hover,
+.navMenuOption-selected {
+  background: rgba(var(--nb-a1-rgb), .16) !important;
+  color: var(--nb-text) !important;
+}
+
+.navMenuOption-selected { font-weight: 600; }
+.MuiMenuItem-root.Mui-selected,
+.MuiMenu-paper .MuiMenuItem-root.Mui-selected {
+  background: rgba(var(--nb-a1-rgb), .18) !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+
+.MuiDivider-root { border-color: var(--nb-line) !important; }
+.MuiListItemIcon-root { color: var(--nb-muted) !important; }
+
+.MuiDrawer-paper .MuiListItemButton-root { border-radius: 12px !important; margin: 1px 8px !important; }
+.MuiDrawer-paper .MuiListItemButton-root:hover { background: rgba(255, 255, 255, .06) !important; }
+.MuiDrawer-paper .MuiListItemButton-root.Mui-selected {
+  background: linear-gradient(135deg, rgba(var(--nb-a1-rgb), .3), rgba(var(--nb-a2-rgb), .14)) !important;
+  box-shadow: inset 0 0 0 1px rgba(var(--nb-a1-rgb), .35);
+}
+.MuiDrawer-paper .MuiListItemButton-root.Mui-selected .MuiListItemIcon-root { color: var(--nb-a2) !important; }
+
+.MuiDrawer-paper .MuiListSubheader-root,
+.sidebarHeader {
+  background: transparent !important;
+  color: var(--nb-muted) !important;
+  font-size: .72em;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.MuiChip-root { background: var(--nb-surface-2) !important; border-radius: 999px !important; }
+.MuiChip-colorPrimary { background: var(--nb-grad) !important; color: #fff !important; }
+
+/* ---------------------------------------------------------------------------
+   11. LISTS / TABLES / PAPER
+   ------------------------------------------------------------------------- */
+
+.paperList,
+.dashboardSection .paperList,
+.MuiCard-root,
+.MuiAccordion-root,
+.MuiTableContainer-root {
+  background: rgba(255, 255, 255, .035) !important;
+  border: 1px solid var(--nb-line) !important;
+  border-radius: 16px !important;
+}
+
+.listItem { padding-left: 1em; border-radius: var(--nb-radius-sm); margin-bottom: 2px !important; }
+.listItem:hover { background: linear-gradient(90deg, rgba(var(--nb-a1-rgb), .12), transparent) !important; }
+.listItem-border { border-color: transparent !important; }
+.listItem:hover bdi:first-of-type { font-weight: 600; }
+
+.MuiTableRow-root:hover { background: rgba(255, 255, 255, .035) !important; }
+.MuiTableCell-root { border-color: var(--nb-line) !important; }
+
+/* ---------------------------------------------------------------------------
+   12. PLAYER / MISC
+   ------------------------------------------------------------------------- */
+
+.osdHeader { background: linear-gradient(to bottom, rgba(0, 0, 0, .7), transparent) !important; }
+.videoOsdBottom { background: none !important; }
+.nowPlayingBar {
+  background: rgba(20, 20, 24, .92) !important;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--nb-line);
+  border-radius: 20px;
+}
+
+.videoOsdBottom .btnPause,
+.nowPlayingBar .playPauseButton,
+.skip-button,
+button.skip-button {
+  background: var(--nb-grad) !important;
+  color: #fff !important;
+  border-radius: 50% !important;
+}
+
+.mdl-slider::-webkit-slider-thumb,
+.mdl-slider::-moz-range-thumb { background: var(--nb-a1) !important; }
+.backgroundContainer.withBackdrop {
+  background: linear-gradient(to bottom, rgba(11, 11, 13, .15), rgba(11, 11, 13, .8) 55%, var(--nb-bg)) !important;
+}
+
+/* Background image: sharp everywhere (no blur) */
+.backdropImage {
+  filter: saturate(115%) contrast(105%) brightness(45%);
+  -webkit-filter: saturate(115%) contrast(105%) brightness(45%);
+}
+
+.blurhash-canvas {
+  filter: none;
+  -webkit-filter: none;
+  opacity: .35;
+}
+
+/* Detail pages: full sharp backdrop, no blur in any layer */
+#itemDetailPage .backdropImage,
+.itemDetailPage .backdropImage,
+#itemDetailPage .itemBackdrop,
+.itemDetailPage .itemBackdrop,
+#itemDetailPage .itemBackdrop::before,
+.itemDetailPage .itemBackdrop::before,
+#itemDetailPage .itemBackdrop::after,
+.itemDetailPage .itemBackdrop::after,
+#itemDetailPage .detailPagePrimaryContainer,
+.itemDetailPage .detailPagePrimaryContainer,
+#itemDetailPage .detailPagePrimaryContainer::before,
+.itemDetailPage .detailPagePrimaryContainer::before,
+#itemDetailPage .blurhash-canvas,
+.itemDetailPage .blurhash-canvas {
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+#itemDetailPage .backdropImage,
+.itemDetailPage .backdropImage {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* ---------------------------------------------------------------------------
+   13. LOGIN — ABYSS STYLE, TRANSPARENT
+   Placed last so it overrides every generic app rule above.
+   ------------------------------------------------------------------------- */
+
+#loginPage,
+.login-page,
+[data-view="login"] {
+  position: relative;
+  isolation: isolate;
+  color: rgb(var(--abyss-accent)) !important;
+  font-family: "Google Sans", "Inter", system-ui, sans-serif !important;
+  background-color: var(--login-bg) !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+/* Optional login image (set --login-image), kept behind the veil */
+#loginPage::after,
+.login-page::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background: var(--login-image, none) center / cover no-repeat;
+  opacity: var(--login-image-opacity);
+}
+
+/* Jellyfin paints an opaque colour on body/#reactRoot/backdrop wrappers.
+   Only the colour is cleared, so a custom background-image is preserved. */
+html:has(#loginPage:not(.hide)) body,
+html:has(#loginPage:not(.hide)) #reactRoot,
+html:has(#loginPage:not(.hide)) .backgroundContainer,
+html:has(#loginPage:not(.hide)) .backdropContainer {
+  background-color: transparent !important;
+}
+
+/* Remove the in-app gradient on login so the image is not darkened */
+html:has(#loginPage:not(.hide)) .backgroundContainer.withBackdrop {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Login backdrop: always sharp, never blurred (set --login-image-blur only if you want blur) */
+html:has(#loginPage:not(.hide)) .backdropImage,
+html:has(#loginPage:not(.hide)) .backdropContainer,
+html:has(#loginPage:not(.hide)) .backgroundContainer,
+html:has(.login-page) .backdropImage,
+#loginPage .backdropImage {
+  filter: none !important;
+  -webkit-filter: none !important;
+  opacity: var(--login-image-opacity);
+}
+
+/* Nothing on the login screen may blur the wallpaper behind it */
+html:has(#loginPage:not(.hide)) #loginPage,
+html:has(#loginPage:not(.hide)) #loginPage *,
+html:has(.login-page) .login-page,
+html:has(.login-page) .login-page * {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Readability veil over your wallpaper. Set --login-scrim: 0 for none. */
+#loginPage::before,
+.login-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(0, 0, 0, .55) 0%, rgba(0, 0, 0, .15) 45%, transparent 75%),
+    linear-gradient(to bottom, rgba(0, 0, 0, .18), rgba(0, 0, 0, .45));
+  opacity: var(--login-scrim);
+}
+
+/* Login header on Jellyfin: keep it invisible so the page stays transparent */
+html:has(#loginPage:not(.hide)) .skinHeader,
+html:has(#loginPage:not(.hide)) header.MuiAppBar-root {
+  background: transparent !important;
+  border-bottom-color: transparent !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+/* Center the form — vertical rhythm kept tight so the page never scrolls */
+#loginPage .padded-left.padded-right,
+#loginPage > .padded-left,
+#loginPage .padded-left.padded-right.padded-bottom-page {
+  max-width: 420px;
+  margin: clamp(16px, 6vh, 64px) auto 20px !important;
+}
+
+#loginPage .readOnlyContent,
+#loginPage form { max-width: 420px; }
+
+/* Card over the image — tint only, NO blur, so the wallpaper stays sharp */
+#loginPage .manualLoginForm,
+#loginPage form.manualLoginForm,
+#loginPage form,
+.login-page .login-card,
+.login-card {
+  padding: clamp(20px, 3.2vw, 30px) clamp(18px, 2.6vw, 26px) 18px !important;
+  background: rgba(var(--login-card-rgb) / var(--login-card-alpha)) !important;
+  background-image: linear-gradient(150deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .01)) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  border: 1px solid rgba(var(--abyss-accent), .18) !important;
+  border-radius: 24px !important;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, .45),
+    inset 0 1px 0 rgba(255, 255, 255, .06) !important;
+  animation: loginRise .55s var(--abyss-ease) both;
+}
+
+/* Avoid double-carding when Jellyfin nests form + readOnlyContent */
+#loginPage .readOnlyContent form { background: transparent !important; border: 0 !important; box-shadow: none !important; backdrop-filter: none !important; }
+
+@keyframes loginRise {
+  from { opacity: 0; transform: translateY(14px) scale(.99); }
+  to   { opacity: 1; transform: none; }
+}
+
+#loginPage h1,
+#loginPage .sectionTitle,
+.login-page .login-title {
+  display: block !important;
+  margin: 0 0 1.2em !important;
+  font-size: 1.35rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -.01em;
+  text-align: center;
+  color: rgb(var(--abyss-accent));
+}
+
+/* Inputs */
+#loginPage .emby-input,
+#loginPage .emby-textarea,
+#loginPage .emby-select,
+.login-page .input {
+  width: 100%;
+  height: 3em;
+  padding: 0 .95em !important;
+  background: rgba(0, 0, 0, .32) !important;
+  border: 1px solid rgba(var(--abyss-accent), .16) !important;
+  border-radius: 10px !important;
+  color: rgb(var(--abyss-accent)) !important;
+  font-size: .95rem !important;
+  box-shadow: none;
+  transition: border-color .2s var(--abyss-ease), background .2s var(--abyss-ease), box-shadow .2s var(--abyss-ease);
+}
+
+#loginPage .emby-input::placeholder,
+.login-page .input::placeholder { color: rgba(var(--abyss-accent), .38); }
+
+#loginPage .emby-input:focus,
+#loginPage .emby-textarea:focus,
+#loginPage .emby-select:focus,
+.login-page .input:focus {
+  background: rgba(0, 0, 0, .48) !important;
+  border-color: rgba(var(--abyss-accent), .55) !important;
+  box-shadow: 0 0 0 3px rgba(var(--abyss-accent), .12) !important;
+}
+
+#loginPage .inputContainer,
+.login-page .field { margin-bottom: 1em; }
+
+#loginPage .inputLabel,
+.login-page .label {
+  margin-bottom: .45em;
+  color: rgba(var(--abyss-accent), .62) !important;
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+/* Primary button — transparent glass, not a solid white block */
+#loginPage .button-submit,
+.login-page .button-submit {
+  width: 100%;
+  height: 3em;
+  margin-top: .5em !important;
+  border: 1px solid rgba(var(--abyss-accent), .35) !important;
+  border-radius: 10px !important;
+  background: rgba(255, 255, 255, .07) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  color: rgb(var(--abyss-accent)) !important;
+  font-size: .98rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+  box-shadow: none !important;
+  transition: background .2s var(--abyss-ease), border-color .2s var(--abyss-ease), transform .2s var(--abyss-ease);
+}
+
+#loginPage .button-submit:hover,
+.login-page .button-submit:hover {
+  background: rgba(255, 255, 255, .16) !important;
+  border-color: rgba(var(--abyss-accent), .65) !important;
+  color: #fff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .3) !important;
+}
+
+#loginPage .button-submit:active,
+.login-page .button-submit:active { transform: translateY(0) scale(.99); }
+
+/* Secondary actions */
+#loginPage .raised.cancel.block.btnForgotPassword,
+#loginPage .raised:not(.button-submit),
+#loginPage .button-flat,
+.login-page .button-flat {
+  width: 100%;
+  margin-top: .65em !important;
+  padding: .6em .9em;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  color: rgba(var(--abyss-accent), .62) !important;
+  font-weight: 500;
+  transition: color .2s var(--abyss-ease), background .2s var(--abyss-ease);
+}
+
+#loginPage .raised.cancel.block.btnForgotPassword:hover,
+#loginPage .raised:not(.button-submit):hover,
+#loginPage .button-flat:hover,
+.login-page .button-flat:hover {
+  background: rgba(var(--abyss-accent), .07) !important;
+  color: rgb(var(--abyss-accent)) !important;
+}
+
+/* Checkbox + disclaimer */
+#loginPage .checkboxOutline,
+.login-page .checkbox {
+  border: 1px solid rgba(var(--abyss-accent), .3) !important;
+  border-radius: 6px !important;
+  transition: background .2s var(--abyss-ease), border-color .2s var(--abyss-ease);
+}
+
+#loginPage input[type="checkbox"]:checked ~ .checkboxOutline,
+#loginPage input[type="checkbox"]:checked + .checkboxOutline,
+.login-page .checkbox:checked {
+  background: rgb(var(--abyss-accent)) !important;
+  border-color: rgb(var(--abyss-accent)) !important;
+}
+
+#loginPage .checkboxIcon { color: #0b0b0d !important; }
+
+/* Login disclaimer (Dashboard → General → Login disclaimer).
+   Compact glass note, kept small so the whole login fits without scrolling. */
+#loginPage .disclaimerContainer,
+#loginPage .loginDisclaimer,
+#loginPage .disclaimer,
+#loginPage .readOnlyContent .disclaimerContainer,
+.login-page .login-disclaimer {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  width: fit-content;
+  max-width: min(420px, 88vw);
+  margin: .7em auto 0 !important;
+  padding: .4em .85em;
+  background: rgba(var(--login-card-rgb) / .42);
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  border: 1px solid rgba(var(--abyss-accent), .14);
+  border-radius: 10px;
+  color: rgba(var(--abyss-accent), .78) !important;
+  font-family: "Google Sans", "Inter", system-ui, sans-serif !important;
+  font-size: .72rem !important;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: center !important;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .5);
+}
+
+#loginPage .disclaimerContainer a,
+#loginPage .loginDisclaimer a,
+#loginPage .disclaimer a,
+.login-page .login-disclaimer a {
+  color: rgb(var(--abyss-accent)) !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+#loginPage .disclaimerContainer strong,
+#loginPage .loginDisclaimer strong,
+#loginPage .disclaimer strong,
+.login-page .login-disclaimer strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* User selector: circular avatars with a white ring */
+#loginPage .itemsContainer .card,
+#loginPage .itemsContainer .cardBox { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+#loginPage .itemsContainer .cardScalable,
+#loginPage .itemsContainer .cardImageContainer,
+#loginPage .itemsContainer .cardPadder { border-radius: 50% !important; }
+#loginPage .itemsContainer .card:hover .cardScalable,
+#loginPage .itemsContainer .card:focus .cardScalable {
+  transform: none;
+  box-shadow: 0 0 0 2px rgba(var(--abyss-accent), .7), 0 14px 34px rgba(0, 0, 0, .45) !important;
+}
+#loginPage .itemsContainer .cardText {
+  justify-content: center !important;
+  text-align: center !important;
+  color: rgba(var(--abyss-accent), .85) !important;
+  font-weight: 500;
+  font-size: .95rem;
+}
+
+#loginPage .cardText-first { font-weight: 500 !important; color: rgb(var(--abyss-accent)) !important; }
+#loginPage .cardText-secondary { color: rgba(var(--abyss-accent), .5) !important; }
+
+/* Login scrollbar + selection */
+#loginPage ::selection,
+.login-page ::selection { background: rgba(var(--abyss-accent), .25); color: rgb(var(--abyss-accent)); }
+#loginPage ::-webkit-scrollbar-thumb { background: rgba(var(--abyss-accent), .5); }
+#loginPage :focus-visible,
+.login-page :focus-visible { outline-color: rgba(var(--abyss-accent), .7) !important; }
+
+/* ---------------------------------------------------------------------------
+   14. RESPONSIVE
+   ------------------------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  header.MuiAppBar-root > .MuiToolbar-root:first-of-type > .MuiStack-root:first-of-type,
+  header.MuiAppBar-root > .MuiToolbar-root:first-of-type > .headerTabs {
+    position: static;
+    transform: none;
+    max-width: none;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  header.MuiAppBar-root > .MuiToolbar-root { justify-content: flex-start; }
+  header.MuiAppBar-root > .MuiToolbar-root:first-of-type > .MuiBox-root:last-child { order: -1; margin-right: 0; }
+}
+
+@media (max-width: 760px) {
+  :root { --header-h: 56px; }
+
+  .app-header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    padding-inline: 10px;
+  }
+
+  .app-header .category-bar,
+  .app-header .category-nav {
+    justify-self: stretch;
+    justify-content: flex-start;
+    padding-inline: 2px;
+  }
+
+  .category-bar .category,
+  .category-nav .category { padding: .48em .9em; font-size: .9rem; }
+
+  .profile-panel {
+    left: 8px;
+    width: min(320px, calc(100vw - 16px));
+  }
+
+  #loginPage .padded-left.padded-right,
+  #loginPage > .padded-left { margin-top: clamp(12px, 4vh, 40px) !important; padding-inline: 16px; }
+
+  .itemDetailPage .detailRibbon { background: linear-gradient(to bottom, transparent, var(--nb-bg) 85%) !important; }
+}
+
+/* Short screens: shrink the login stack so the whole page fits without scrolling */
+@media (max-height: 820px) {
+  #loginPage .padded-left.padded-right,
+  #loginPage > .padded-left,
+  #loginPage .padded-left.padded-right.padded-bottom-page {
+    margin-top: clamp(8px, 2.5vh, 32px) !important;
+    margin-bottom: 10px !important;
+  }
+
+  #loginPage .manualLoginForm,
+  #loginPage form.manualLoginForm,
+  #loginPage form {
+    padding: 18px 20px 14px !important;
+  }
+
+  #loginPage h1,
+  #loginPage .sectionTitle {
+    margin-bottom: .85em !important;
+    font-size: 1.2rem !important;
+  }
+
+  #loginPage .inputContainer { margin-bottom: .6em !important; }
+  #loginPage .emby-input { height: 2.7em; }
+  #loginPage .button-submit { height: 2.7em; }
+
+  #loginPage .disclaimerContainer,
+  #loginPage .loginDisclaimer,
+  #loginPage .disclaimer,
+  .login-page .login-disclaimer {
+    margin-top: .45em !important;
+    padding: .3em .75em;
+    font-size: .68rem !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   15. ACCESSIBILITY
+   ------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .card:hover .cardScalable { transform: none; }
+}
